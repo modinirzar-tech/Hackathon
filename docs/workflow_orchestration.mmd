@@ -1,0 +1,82 @@
+flowchart TD
+  IN([Client request<br/>tenant_id, user_id, query]) --> GW[API Gateway<br/>authN, tenant bind, traceparent]
+
+  subgraph SEC["① Ingress & Security — span hook.pre ≤15ms"]
+    GW --> PII[PII Redactor<br/>prio 10, fail-closed]
+    PII --> INJ[Injection Shield / Classifier<br/>prio 20, fail-closed]
+  end
+  PII -- "plugin error" --> REF1[/Refuse: POLICY_BLOCKED/]
+  INJ -- "attack detected" --> REF1
+  INJ --> CACHE{Redis semantic cache<br/>key = SHA256 tenant:user:query<br/>span cache.lookup}
+  CACHE -- "HIT cosine ≥ threshold" --> OUT
+  CACHE -- MISS --> TRI
+
+  subgraph TR["② Triage — temp=0.0, ≤25ms"]
+    TRI[Triage Agent<br/>intent, domain, risk_tier, complexity]
+  end
+  TRI -- DIRECT_ANSWER --> DIR[Direct Response<br/>no tools]
+  TRI -- HYBRID_RAG --> RET
+  TRI -- TRANSACTION_EXEC --> EXE
+  TRI -- REJECT_OOS --> REF2[/Reject out-of-scope/]
+  TRI -- "audit / verify need" --> AUD
+
+  subgraph LOOP["③ Bounded ReAct Loop — max_steps=5, step ≤120ms, total ≤450ms"]
+    direction TB
+    ST0[INIT] --> ST1[REASONING<br/>GoalAnchorBlock at index 0]
+    ST1 --> HAR[ToolExecutionHarness<br/>1 Pydantic strict<br/>2 regex auto-repair<br/>3 RBAC tier<br/>4 UUIDv4 idempotency]
+    HAR --> CB{Circuit Breaker<br/>same tool+args_hash fails ≥2?}
+    CB -- yes --> HALT[HALTED_BREAKER<br/>remediation prompt]
+    CB -- no --> TC[TOOL_CALL]
+    TC --> OBS[OBSERVATION<br/>compress ≤180 tokens]
+    OBS --> VER{VERIFY}
+    VER -- "need more evidence & steps<5" --> ST1
+    VER -- done --> DONE[DONE]
+    VER -- "steps=5 / budget out" --> HALT2[HALTED]
+  end
+
+  subgraph RAGSG["Retrieval Subagent (read-only)"]
+    RET[Query rewrite] -->|"JSON-RPC hybrid_retrieve"| BM[Stage 1 BM25 top50 ≤12ms]
+    RET -->|parallel| DN[Stage 2 BGE bi-encoder + FAISS top50 ≤25ms]
+    BM --> RRF[RRF k=60, dedupe, pool 40 ≤3ms]
+    DN --> RRF
+    RRF --> CE[Stage 3 Cross-Encoder rerank_k=4 ≤45ms]
+    CE --> GATE{top score ≥ 0.42?}
+    GATE -- "no" --> ABS[Deterministic abstention<br/>no LLM, <90ms]
+    GATE -- yes --> GRAPH[mcp-graphify-vault<br/>depth ≤2, ~320 tokens]
+  end
+  RET --> LOOP
+  GRAPH --> LOOP
+  ABS --> OUT
+
+  subgraph EXSG["Execution Subagent (state-store only, no RAG/web)"]
+    EXE[Validate schema & form] --> TIER{Risk tier}
+    TIER -- "T1/T2" --> RUN[Execute via mcp-state-store]
+    TIER -- "T3_MUTATE" --> HITL[Tier-3 HITL Gate<br/>write PENDING_APPROVAL, freeze]
+    HITL --> APP{Approver decision}
+    APP -- approve --> RUN
+    APP -- reject --> DENY[/Denied + audit/]
+  end
+  EXE --> LOOP
+
+  subgraph AUDSG["Verification Subagent (independent context, can veto)"]
+    AUD[Claim→chunk NLI check]
+  end
+  DONE --> GEN[LLM generate<br/>vLLM, cited answer]
+  DIR --> GEN
+  RUN --> GEN
+  GEN --> AUD
+  AUD -- "ungrounded: veto" --> ABS
+  AUD -- grounded --> POST
+
+  subgraph POSTG["④ Post-Execution & Egress"]
+    POST[Post-hook: RAGAS auditor ≥0.92 faithfulness<br/>PII output scrub] --> LOG[Hash-chained audit_append<br/>prev_hash + payload]
+    LOG --> OTEL[OTel export<br/>spans → Collector → Prom/Tempo/Grafana]
+    LOG --> FACTS[session_facts_put<br/>verified facts only]
+    LOG --> CW[Cache write<br/>jittered TTL 300s ±45s]
+  end
+  CW --> OUT([Response + citations + trace_id])
+  REF1 --> OUT
+  REF2 --> OUT
+  DENY --> OUT
+  HALT --> OUT
+  HALT2 --> OUT

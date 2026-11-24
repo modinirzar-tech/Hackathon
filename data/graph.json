@@ -1,0 +1,190 @@
+{
+  "nodes": [
+    {
+      "id": "acme-discount-tiers",
+      "domain": "finance",
+      "risk_tier": "TIER_1_READ",
+      "version": 1,
+      "tenant": "tenant_acme",
+      "summary": "Acme partners receive a 12 percent volume discount on orders above 500 units."
+    },
+    {
+      "id": "data-retention",
+      "domain": "security",
+      "risk_tier": "TIER_1_READ",
+      "version": 2,
+      "tenant": "all",
+      "summary": "Audit logs are retained for 7 years."
+    },
+    {
+      "id": "expense-policy",
+      "domain": "finance",
+      "risk_tier": "TIER_1_READ",
+      "version": 4,
+      "tenant": "all",
+      "summary": "Meals are reimbursed up to $60 per day."
+    },
+    {
+      "id": "lot-recall-procedure",
+      "domain": "quality",
+      "risk_tier": "TIER_3_MUTATE",
+      "version": 4,
+      "tenant": "all",
+      "summary": "A lot recall must be approved by the Quality Director before it is executed."
+    },
+    {
+      "id": "password-policy",
+      "domain": "security",
+      "risk_tier": "TIER_1_READ",
+      "version": 3,
+      "tenant": "all",
+      "summary": "The minimum password length is 14 characters; passwords must contain at least 14 characters."
+    },
+    {
+      "id": "pto-policy",
+      "domain": "hr",
+      "risk_tier": "TIER_1_READ",
+      "version": 6,
+      "tenant": "all",
+      "summary": "Employees receive 20 days of paid time off (PTO) per year, accruing 1.67 days per month."
+    },
+    {
+      "id": "refund-policy",
+      "domain": "finance",
+      "risk_tier": "TIER_1_READ",
+      "version": 3,
+      "tenant": "all",
+      "summary": "Customers may request a refund within 30 days of purchase with a valid receipt."
+    },
+    {
+      "id": "returns-process",
+      "domain": "logistics",
+      "risk_tier": "TIER_1_READ",
+      "version": 2,
+      "tenant": "all",
+      "summary": "Every return needs a Return Merchandise Authorization (RMA) number."
+    },
+    {
+      "id": "security-incident-response",
+      "domain": "security",
+      "risk_tier": "TIER_1_READ",
+      "version": 3,
+      "tenant": "all",
+      "summary": "Any suspected security incident must be reported to the security hotline within 1 hour."
+    },
+    {
+      "id": "shipping-sla",
+      "domain": "logistics",
+      "risk_tier": "TIER_1_READ",
+      "version": 2,
+      "tenant": "all",
+      "summary": "Standard shipping takes 5 business days and expedited shipping takes 2 business days."
+    },
+    {
+      "id": "sku-catalog",
+      "domain": "product",
+      "risk_tier": "TIER_1_READ",
+      "version": 5,
+      "tenant": "all",
+      "summary": "Product identifiers use the format SKU-042 with exactly three digits."
+    },
+    {
+      "id": "warranty-terms",
+      "domain": "product",
+      "risk_tier": "TIER_1_READ",
+      "version": 3,
+      "tenant": "all",
+      "summary": "Hardware carries a 24 month warranty and accessories carry a 12 month warranty."
+    },
+    {
+      "id": "workflow-states",
+      "domain": "quality",
+      "risk_tier": "TIER_3_MUTATE",
+      "version": 2,
+      "tenant": "all",
+      "summary": "Records move through DRAFT, REVIEW and RELEASED."
+    }
+  ],
+  "edges": [
+    {
+      "src": "acme-discount-tiers",
+      "dst": "refund-policy",
+      "kind": "wikilink"
+    },
+    {
+      "src": "data-retention",
+      "dst": "security-incident-response",
+      "kind": "wikilink"
+    },
+    {
+      "src": "expense-policy",
+      "dst": "pto-policy",
+      "kind": "wikilink"
+    },
+    {
+      "src": "lot-recall-procedure",
+      "dst": "workflow-states",
+      "kind": "wikilink"
+    },
+    {
+      "src": "password-policy",
+      "dst": "security-incident-response",
+      "kind": "wikilink"
+    },
+    {
+      "src": "pto-policy",
+      "dst": "expense-policy",
+      "kind": "wikilink"
+    },
+    {
+      "src": "refund-policy",
+      "dst": "returns-process",
+      "kind": "wikilink"
+    },
+    {
+      "src": "refund-policy",
+      "dst": "warranty-terms",
+      "kind": "wikilink"
+    },
+    {
+      "src": "returns-process",
+      "dst": "refund-policy",
+      "kind": "wikilink"
+    },
+    {
+      "src": "returns-process",
+      "dst": "sku-catalog",
+      "kind": "wikilink"
+    },
+    {
+      "src": "security-incident-response",
+      "dst": "data-retention",
+      "kind": "wikilink"
+    },
+    {
+      "src": "security-incident-response",
+      "dst": "password-policy",
+      "kind": "wikilink"
+    },
+    {
+      "src": "shipping-sla",
+      "dst": "returns-process",
+      "kind": "wikilink"
+    },
+    {
+      "src": "sku-catalog",
+      "dst": "warranty-terms",
+      "kind": "wikilink"
+    },
+    {
+      "src": "warranty-terms",
+      "dst": "returns-process",
+      "kind": "wikilink"
+    },
+    {
+      "src": "workflow-states",
+      "dst": "lot-recall-procedure",
+      "kind": "wikilink"
+    }
+  ]
+}
